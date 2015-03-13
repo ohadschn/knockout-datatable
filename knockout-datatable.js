@@ -1,5 +1,6 @@
 ﻿(function() {
-  var __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
+  var __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
+    __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; };
 
   this.DataTable = (function() {
     var primitiveCompare, pureComputed;
@@ -21,6 +22,8 @@
     };
 
     function DataTable(rows, options) {
+      this.getLimitedPages = __bind(this.getLimitedPages, this);
+      this.getPages = __bind(this.getPages, this);
       var serverSideOpts;
       if (!options) {
         if (!(rows instanceof Array)) {
@@ -65,25 +68,31 @@
       return this.rows = ko.observableArray([]);
     };
 
-    DataTable.prototype.getPages = function(rows, perPage) {
-      var pageNumber, pagesArr, rowIndex;
+    DataTable.prototype.getPages = function(rowCount) {
+      var page, pageNumber, pagesArr, perPage, rowIndex;
+      perPage = this.perPage();
       rowIndex = 0;
       pageNumber = 1;
-      pagesArr = new Array(Math.ceil(rows / perPage));
-      while (rowIndex < rows) {
-        pagesArr[pageNumber - 1] = {
+      pagesArr = new Array(Math.ceil(rowCount / perPage));
+      while (rowIndex < rowCount) {
+        page = {
           number: pageNumber,
           start: rowIndex,
-          end: Math.min(rows - 1, rowIndex + perPage - 1)
+          end: Math.min(rowCount - 1, rowIndex + perPage - 1)
         };
+        page.blanks = new Array(pagesArr.length > 1 ? perPage - (page.end - page.start + 1) : 0);
+        pagesArr[pageNumber - 1] = page;
         pageNumber++;
         rowIndex += perPage;
       }
       return pagesArr;
     };
 
-    DataTable.prototype.getLimitedPages = function(pages, current, limit) {
-      var firstPage, lastPage, leftMargin, rightMargin;
+    DataTable.prototype.getLimitedPages = function() {
+      var current, firstPage, lastPage, leftMargin, limit, pages, rightMargin;
+      pages = this.pages();
+      current = this.currentPageNumber();
+      limit = this.options.paginationLimit;
       if (pages.length <= limit) {
         return pages;
       }
@@ -185,12 +194,12 @@
       });
       this.pages = pureComputed((function(_this) {
         return function() {
-          return _this.getPages(_this.filteredRows().length, _this.perPage());
+          return _this.getPages(_this.filteredRows().length);
         };
       })(this));
       this.limitedPages = pureComputed((function(_this) {
         return function() {
-          return _this.getLimitedPages(_this.pages(), _this.currentPageNumber(), _this.options.paginationLimit);
+          return _this.getLimitedPages();
         };
       })(this));
       this.currentPage = pureComputed((function(_this) {
@@ -224,18 +233,12 @@
       })(this));
       this.from = pureComputed((function(_this) {
         return function() {
-          return (_this.currentPageNumber() - 1) * _this.perPage() + 1;
+          return _this.currentPage().start + 1;
         };
       })(this));
       this.to = pureComputed((function(_this) {
         return function() {
-          var to;
-          to = _this.currentPageNumber() * _this.perPage();
-          if (to > _this.total()) {
-            return _this.total();
-          } else {
-            return to;
-          }
+          return _this.currentPage().end + 1;
         };
       })(this));
       this.recordsText = pureComputed((function(_this) {
@@ -446,12 +449,12 @@
       });
       this.pages = pureComputed((function(_this) {
         return function() {
-          return _this.getPages(_this.numFilteredRows().length, _this.perPage());
+          return _this.getPages(_this.numFilteredRows());
         };
       })(this));
       this.limitedPages = pureComputed((function(_this) {
         return function() {
-          return _this.getLimitedPages(_this.pages(), _this.currentPageNumber(), _this.options.paginationLimit);
+          return _this.getLimitedPages();
         };
       })(this));
       this.currentPage = pureComputed((function(_this) {
@@ -480,18 +483,12 @@
       })(this));
       this.from = pureComputed((function(_this) {
         return function() {
-          return (_this.currentPageNumber() - 1) * _this.perPage() + 1;
+          return _this.currentPage().start + 1;
         };
       })(this));
       this.to = pureComputed((function(_this) {
         return function() {
-          var to, total;
-          to = _this.currentPageNumber() * _this.perPage();
-          if (to > (total = _this.numFilteredRows())) {
-            return total;
-          } else {
-            return to;
-          }
+          return _this.currentPage().end + 1;
         };
       })(this));
       this.recordsText = pureComputed((function(_this) {

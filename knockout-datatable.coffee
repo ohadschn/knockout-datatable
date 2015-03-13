@@ -58,24 +58,32 @@ class @DataTable
     @loading     = ko.observable false
     @rows        = ko.observableArray []
     
-  getPages: (rows, perPage) ->
+  getPages: (rowCount) =>
+    perPage = @perPage()
     rowIndex = 0
     pageNumber = 1
-    pagesArr = new Array(Math.ceil rows / perPage)
-    while rowIndex < rows
-        pagesArr[pageNumber - 1] =
+    pagesArr = new Array(Math.ceil(rowCount / perPage))
+    while rowIndex < rowCount
+        page =
             number: pageNumber
             start: rowIndex
-            end: Math.min rows-1, rowIndex+perPage-1
+            end: Math.min(rowCount-1, rowIndex+perPage-1)
+        page.blanks = new Array(if pagesArr.length > 1 then perPage-(page.end-page.start+1) else 0)
+        pagesArr[pageNumber-1] = page 
+        
         pageNumber++
         rowIndex += perPage
-    pagesArr
     
-  getLimitedPages: (pages, current, limit) ->
+    return pagesArr
+    
+  getLimitedPages: () =>
+    pages = @pages()
+    current = @currentPageNumber()
+    limit = @options.paginationLimit
     if (pages.length <= limit)
             return pages
               
-    leftMargin = Math.floor(limit/2);
+    leftMargin = Math.floor(limit/2)
     firstPage = current - Math.floor(leftMargin)
     if (firstPage < 1)
         return pages.slice(0, limit)
@@ -135,30 +143,18 @@ class @DataTable
 
     .extend {rateLimit: 50, method: 'notifyWhenChangesStop'}
       
-    @pages = pureComputed =>
-        @getPages @filteredRows().length, @perPage()
-        
-    @limitedPages = pureComputed => 
-        @getLimitedPages @pages(), @currentPageNumber(), @options.paginationLimit
-
-    @currentPage = pureComputed =>
-        @pages()[@currentPageNumber() - 1]
-        
-    @pagedRows = pureComputed =>
-        @filteredRows().slice @currentPage().start, @currentPage().end + 1
+    @pages = pureComputed => @getPages @filteredRows().length
+    @limitedPages = pureComputed => @getLimitedPages()
+    @currentPage = pureComputed => @pages()[@currentPageNumber() - 1]
+    @pagedRows = pureComputed => @filteredRows().slice(@currentPage().start, @currentPage().end + 1)
 
     @leftPagerClass = pureComputed => 'disabled' if @currentPageNumber() is 1
     @rightPagerClass = pureComputed => 'disabled' if @currentPageNumber() is @pages().length
 
     # info
     @total = pureComputed => @filteredRows().length
-    @from = pureComputed => (@currentPageNumber() - 1) * @perPage() + 1
-    @to = pureComputed =>
-      to = @currentPageNumber() * @perPage()
-      if to > @total()
-        @total()
-      else
-        to
+    @from = pureComputed => @currentPage().start + 1
+    @to = pureComputed => @currentPage().end  + 1
 
     @recordsText = pureComputed =>
       from = @from()
@@ -282,29 +278,17 @@ class @DataTable
 
     .extend {rateLimit: 500, method: 'notifyWhenChangesStop'}
 
-    @pages = pureComputed =>
-            @getPages @numFilteredRows().length, @perPage()
-        
-    @limitedPages = pureComputed => 
-        @getLimitedPages @pages(), @currentPageNumber(), @options.paginationLimit
-
-    @currentPage = pureComputed =>
-        @pages()[@currentPageNumber() - 1]
-        
-    @pagedRows = pureComputed =>
-        @filteredRows().slice @currentPage().start, @currentPage().end + 1
+    @pages = pureComputed => @getPages @numFilteredRows()
+    @limitedPages = pureComputed => @getLimitedPages()
+    @currentPage = pureComputed => @pages()[@currentPageNumber() - 1]
+    @pagedRows = pureComputed => @filteredRows().slice(@currentPage().start, @currentPage().end + 1)
 
     @leftPagerClass = pureComputed => 'disabled' if @currentPageNumber() is 1
     @rightPagerClass = pureComputed => 'disabled' if @currentPageNumber() is @pages().length
 
     # info
-    @from = pureComputed => (@currentPageNumber() - 1) * @perPage() + 1
-    @to = pureComputed =>
-      to = @currentPageNumber() * @perPage()
-      if to > (total = @numFilteredRows())
-        total
-      else
-        to
+    @from = pureComputed => @currentPage().start + 1
+    @to = pureComputed => @currentPage().end  + 1
 
     @recordsText = pureComputed =>
       total = @numFilteredRows()

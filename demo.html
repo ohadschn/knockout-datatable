@@ -275,6 +275,13 @@ class @CitiesModel
         &lt;td data-bind="text: $row.population"&gt;&lt;/td&gt;
       &lt;/tr&gt;
       &lt;!-- /ko --&gt;
+      &lt;!-- ko foreach: {data: currentPage().blanks}  --&gt;
+      &lt;tr&gt;
+        &lt;td&gt;-&lt;/td&gt;
+        &lt;td&gt;-&lt;/td&gt;
+        &lt;td&gt;-&lt;/td&gt;
+      &lt;/tr&gt;
+      &lt;!-- /ko --&gt;
     &lt;/tbody&gt;
   &lt;/table&gt;
   &lt;span data-bind="text: recordsText" class="label label-info pull-right"&gt;&lt;/span&gt;
@@ -343,6 +350,13 @@ document.addEventListener('DOMContentLoaded', function(){
                                 <td data-bind="text: $row.population"></td>
                             </tr>
                             <!-- /ko -->
+                            <!-- ko foreach: {data: currentPage().blanks} -->
+                            <tr>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <!-- /ko -->
                         </tbody>
                     </table>
                     <span data-bind="text: recordsText" class="label label-info pull-right"></span>
@@ -409,6 +423,13 @@ document.addEventListener('DOMContentLoaded', function(){
                                 <td data-bind="text: $row.population"></td>
                             </tr>
                             <!-- /ko -->
+                            <!-- ko foreach: {data: currentPage().blanks} -->
+                            <tr>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>-</td>
+                            </tr>
+                            <!-- /ko -->
                         </tbody>
                     </table>
                     <span data-bind="text: recordsText" class="label label-info pull-right"></span>
@@ -452,6 +473,9 @@ document.addEventListener('DOMContentLoaded', function(){
 
                     <dt><code>perPage</code></dt>
                     <dd>Integer indicating the number of rows to be shown per page. Default: <code>15</code></dd>
+
+                    <dt><code>paginationLimit</code></dt>
+                    <dd>Integer indicating the number of pages to include in the <code>table.limitedPages</code> observable array. Default: <code>10</code></dd>
 
                     <dt><code>unsortedClass</code><br /><code>descSortClass</code><br /><code>ascSortClass</code></dt>
                     <dd>The classes given to the icons in the <code>th</code> elements indicating the direction of sorting. Set to '' if you would rather have no icons. Default: <code>''</code> for each</dd>
