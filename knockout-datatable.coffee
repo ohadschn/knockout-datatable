@@ -24,15 +24,16 @@ class @DataTable
 
     # set some default options if none were passed in
     @options =
-      recordWord:       options.recordWord    or 'record'
+      recordWord:       options.recordWord          or 'record'
       recordWordPlural: options.recordWordPlural
-      sortDir:          options.sortDir       or 'asc'
-      sortField:        options.sortField     or undefined
-      perPage:          options.perPage       or 15
-      filterFn:         options.filterFn      or undefined
-      unsortedClass:    options.unsortedClass or ''
-      descSortClass:    options.descSortClass or ''
-      ascSortClass:     options.ascSortClass  or ''
+      sortDir:          options.sortDir             or 'asc'
+      sortField:        options.sortField           or undefined
+      perPage:          options.perPage             or 15
+      paginationLimit:  options.paginationLimit     or 10
+      filterFn:         options.filterFn            or undefined
+      unsortedClass:    options.unsortedClass       or ''
+      descSortClass:    options.descSortClass       or ''
+      ascSortClass:     options.ascSortClass        or ''
 
     @initObservables()
 
@@ -52,16 +53,46 @@ class @DataTable
     @sortDir     = ko.observable @options.sortDir
     @sortField   = ko.observable @options.sortField
     @perPage     = ko.observable @options.perPage
-    @currentPage = ko.observable 1
+    @currentPageNumber = ko.observable 1
     @filter      = ko.observable ''
     @loading     = ko.observable false
     @rows        = ko.observableArray []
+    
+  getPages: (rows, perPage) ->
+    rowIndex = 0
+    pageNumber = 1
+    pagesArr = new Array(Math.ceil rows / perPage)
+    while rowIndex < rows
+        pagesArr[pageNumber - 1] =
+            number: pageNumber
+            start: rowIndex
+            end: Math.min rows-1, rowIndex+perPage-1
+        pageNumber++
+        rowIndex += perPage
+    pagesArr
+    
+  getLimitedPages: (pages, current, limit) ->
+    if (pages.length <= limit)
+            return pages
+              
+    leftMargin = Math.floor(limit/2);
+    firstPage = current - Math.floor(leftMargin)
+    if (firstPage < 1)
+        return pages.slice(0, limit)
+            
+    rightMargin = if limit%2 == 0 then leftMargin-1 else leftMargin
+    lastPage = current + rightMargin
+    if (lastPage > pages.length)
+        return pages.slice(pages.length - limit, pages.length)
+            
+    return pages.slice(firstPage-1, lastPage)
+    
 
   initWithClientSidePagination: (rows) ->
     @filtering = ko.observable false
 
-    @filter.subscribe => @currentPage 1
-    @perPage.subscribe => @currentPage 1
+    @filter.subscribe => @currentPageNumber 1
+    @perPage.subscribe => @currentPageNumber 1
 
     @rows rows
 
@@ -103,35 +134,39 @@ class @DataTable
       rows
 
     .extend {rateLimit: 50, method: 'notifyWhenChangesStop'}
+      
+    @pages = pureComputed =>
+        @getPages @filteredRows().length, @perPage()
+        
+    @limitedPages = pureComputed => 
+        @getLimitedPages @pages(), @currentPageNumber(), @options.paginationLimit
 
+    @currentPage = pureComputed =>
+        @pages()[@currentPageNumber() - 1]
+        
     @pagedRows = pureComputed =>
-      pageIndex = @currentPage() - 1
-      perPage = @perPage()
-      @filteredRows().slice pageIndex * perPage, (pageIndex+1) * perPage
+        @filteredRows().slice @currentPage().start, @currentPage().end + 1
 
-    @pages = pureComputed => Math.ceil @filteredRows().length / @perPage()
-
-    @leftPagerClass = pureComputed => 'disabled' if @currentPage() is 1
-    @rightPagerClass = pureComputed => 'disabled' if @currentPage() is @pages()
+    @leftPagerClass = pureComputed => 'disabled' if @currentPageNumber() is 1
+    @rightPagerClass = pureComputed => 'disabled' if @currentPageNumber() is @pages().length
 
     # info
     @total = pureComputed => @filteredRows().length
-    @from = pureComputed => (@currentPage() - 1) * @perPage() + 1
+    @from = pureComputed => (@currentPageNumber() - 1) * @perPage() + 1
     @to = pureComputed =>
-      to = @currentPage() * @perPage()
+      to = @currentPageNumber() * @perPage()
       if to > @total()
         @total()
       else
         to
 
     @recordsText = pureComputed =>
-      pages = @pages()
-      total = @total()
       from = @from()
       to = @to()
+      total = @total()
       recordWord = @options.recordWord
       recordWordPlural = @options.recordWordPlural or recordWord + 's'
-      if pages > 1
+      if @pages().length > 1
         "#{from} to #{to} of #{total} #{recordWordPlural}"
       else
         "#{total} #{if total > 1 or total is 0 then recordWordPlural else recordWord}"
@@ -161,7 +196,7 @@ class @DataTable
 
     @replaceRows = (rows) =>
       @rows rows
-      @currentPage 1
+      @currentPageNumber 1
       @filter undefined
 
     _defaultMatch = (filter, row, attrMap) ->
@@ -199,20 +234,20 @@ class @DataTable
       req.open 'GET', url, true
       req.setRequestHeader 'Content-Type', 'application/json'
 
-      req.onload = =>
+      req.onload = ->
         if req.status >= 200 and req.status < 400
           cb null, JSON.parse(req.responseText)
         else
           cb new Error("Error communicating with server")
 
-      req.onerror = => cb new Error "Error communicating with server"
+      req.onerror = -> cb new Error "Error communicating with server"
 
       req.send()
 
-    _gatherData = (perPage, currentPage, filter, sortDir, sortField) ->
+    _gatherData = (perPage, currentPageNumber, filter, sortDir, sortField) ->
       data =
         perPage: perPage
-        page:    currentPage
+        page:    currentPageNumber
 
       if filter? and filter isnt ''
         data.filter  = filter
@@ -227,14 +262,14 @@ class @DataTable
     @pagedRows = ko.observableArray []
     @numFilteredRows = ko.observable 0
 
-    @filter.subscribe => @currentPage 1
-    @perPage.subscribe => @currentPage 1
+    @filter.subscribe => @currentPageNumber 1
+    @perPage.subscribe => @currentPageNumber 1
 
     ko.computed =>
       @loading true
       @filtering true
 
-      data = _gatherData @perPage(), @currentPage(), @filter(), @sortDir(), @sortField()
+      data = _gatherData @perPage(), @currentPageNumber(), @filter(), @sortDir(), @sortField()
 
       _getDataFromServer data, (err, response) =>
         @loading false
@@ -247,28 +282,37 @@ class @DataTable
 
     .extend {rateLimit: 500, method: 'notifyWhenChangesStop'}
 
-    @pages = pureComputed => Math.ceil @numFilteredRows() / @perPage()
+    @pages = pureComputed =>
+            @getPages @numFilteredRows().length, @perPage()
+        
+    @limitedPages = pureComputed => 
+        @getLimitedPages @pages(), @currentPageNumber(), @options.paginationLimit
 
-    @leftPagerClass = pureComputed => 'disabled' if @currentPage() is 1
-    @rightPagerClass = pureComputed => 'disabled' if @currentPage() is @pages()
+    @currentPage = pureComputed =>
+        @pages()[@currentPageNumber() - 1]
+        
+    @pagedRows = pureComputed =>
+        @filteredRows().slice @currentPage().start, @currentPage().end + 1
+
+    @leftPagerClass = pureComputed => 'disabled' if @currentPageNumber() is 1
+    @rightPagerClass = pureComputed => 'disabled' if @currentPageNumber() is @pages().length
 
     # info
-    @from = pureComputed => (@currentPage() - 1) * @perPage() + 1
+    @from = pureComputed => (@currentPageNumber() - 1) * @perPage() + 1
     @to = pureComputed =>
-      to = @currentPage() * @perPage()
+      to = @currentPageNumber() * @perPage()
       if to > (total = @numFilteredRows())
         total
       else
         to
 
     @recordsText = pureComputed =>
-      pages = @pages()
       total = @numFilteredRows()
       from = @from()
       to = @to()
       recordWord = @options.recordWord
       recordWordPlural = @options.recordWordPlural or recordWord + 's'
-      if pages > 1
+      if @pages().length > 1
         "#{from} to #{to} of #{total} #{recordWordPlural}"
       else
         "#{total} #{if total > 1 or total is 0 then recordWordPlural else recordWord}"
@@ -302,7 +346,7 @@ class @DataTable
       @loading true
       @filtering true
 
-      data = _gatherData @perPage(), @currentPage(), @filter(), @sortDir(), @sortField()
+      data = _gatherData @perPage(), @currentPageNumber(), @filter(), @sortDir(), @sortField()
 
       _getDataFromServer data, (err, response) =>
         @loading false
@@ -314,7 +358,7 @@ class @DataTable
         @pagedRows results.map(@options.resultHandlerFn)
 
   toggleSort: (field) -> =>
-    @currentPage 1
+    @currentPageNumber 1
     if @sortField() is field
       @sortDir if @sortDir() is 'asc' then 'desc' else 'asc'
     else
@@ -322,15 +366,15 @@ class @DataTable
       @sortField field
 
   prevPage: ->
-    page = @currentPage()
+    page = @currentPageNumber()
     if page isnt 1
-      @currentPage page - 1
+      @currentPageNumber page - 1
 
   nextPage: ->
-    page = @currentPage()
-    if page isnt @pages()
-      @currentPage page + 1
+    page = @currentPageNumber()
+    if page isnt @pages().length
+      @currentPageNumber page + 1
 
-  gotoPage: (page) -> => @currentPage page
+  gotoPage: (page) -> => @currentPageNumber page
 
-  pageClass: (page) -> pureComputed => 'active' if @currentPage() is page
+  pageClass: (page) -> pureComputed => 'active' if @currentPageNumber() is page

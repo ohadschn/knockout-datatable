@@ -44,6 +44,11 @@
         border-top: 1px solid #e5e5e5;
       }
 
+       ul.pagination li a {
+            width: 40px;
+            text-align: center;
+        }
+
       /* Customize container */
       @media (min-width: 768px) {
         .container {
@@ -131,6 +136,7 @@
             sortDir: 'desc',
             sortField: 'population',
             perPage: 15,
+            paginationLimit: 8,
             unsortedClass: "glyphicon glyphicon-sort",
             ascSortClass:  "glyphicon glyphicon-sort-by-attributes",
             descSortClass: "glyphicon glyphicon-sort-by-attributes-alt"
@@ -154,7 +160,8 @@
           tableOptions = {
             recordWord: 'city',
             recordWordPlural: 'cities',
-            perPage: 15
+            perPage: 15,
+            paginationLimit: 7
           };
           rows = citiesList.map(function(row) {
             return new City(_this, row);
@@ -168,52 +175,46 @@
       })();
     </script>
   </head>
-  <body>
+<body>
     <div class='container'>
-      <div class='header'>
-        <ul class='nav nav-pills pull-right'>
-          <li class='active'><a href="#">Demo</a></li>
-          <li><a href='https://github.com/immense/knockout-datatable'>Code</a></li>
-        </ul>
-        <h3 class='text-muted'>Knockout DataTable</h3>
-      </div>
-      <div class='jumbotron'>
-        <h1>Knockout DataTable Demo</h1>
-      </div>
-      <div class='row'>
-        <div class='col-md-12'>
+        <div class='header'>
+            <ul class='nav nav-pills pull-right'>
+                <li class='active'><a href="#">Demo</a></li>
+                <li><a href='https://github.com/immense/knockout-datatable'>Code</a></li>
+            </ul>
+            <h3 class='text-muted'>Knockout DataTable</h3>
+        </div>
+        <div class='jumbotron'>
+            <h1>Knockout DataTable Demo</h1>
+        </div>
+        <div class='row'>
+            <div class='col-md-12'>
 
-          <h2>Simple example</h2>
-          <p>S'pose we wanted to display a table of cities. Just create a view model for the data:</p>
+                <h2>Simple example</h2>
+                <p>S'pose we wanted to display a table of cities. Just create a view model for the data:</p>
 
 <pre class="pre-scrollable">
 class City
-
   constructor: (@view, row) ->
     @population  = ko.observable row.population
     @countryName = row.country_name
     @cityName    = row.city_name
-
 class @CitiesModel
-
   constructor: ->
-
     tableOptions =
       recordWord:       'city'
       recordWordPlural: 'cities'
       sortDir:          'desc'
       sortField:        'population'
       perPage:          15
+      paginationLimit:  8
       unsortedClass:    'glyphicon glyphicon-sort'
       ascSortClass:     'glyphicon glyphicon-sort-by-attributes'
       descSortClass:    'glyphicon glyphicon-sort-by-attributes-alt'
-
     @table = new DataTable [], tableOptions
     @table.loading true
-
     req = new XMLHttpRequest()
     req.open 'GET', '/api/cities', true
-
     req.onload = =>
       if req.status >= 200 and req.status < 400
         response = JSON.parse req.responseText
@@ -223,22 +224,19 @@ class @CitiesModel
       else
         alert "Error communicating with server"
         @table.loading false
-
     req.onerror = =>
       alert "Error communicating with server"
       @table.loading false
-
     req.send()
-
     ko.applyBindings @</pre>
 
-          <p>And a table, like so:</p>
+                <p>And a table, like so:</p>
 
 <pre class="pre-scrollable">
 &lt;div data-bind="with: table"&gt;
   &lt;div class=&quot;pull-right&quot;&gt;
     &lt;strong&gt;Results per page&lt;/strong&gt;
-    &lt;select data-bind=&quot;options: [10,25,50], value: perPage&quot;&gt;&lt;/select&gt;
+    &lt;select data-bind=&quot;options: [10,25,50,5,1], value: perPage&quot;&gt;&lt;/select&gt;
   &lt;/div&gt;
   &lt;input type="text" data-bind="textInput: filter" placeholder="Search"/&gt;
   &lt;table class="table table-striped table-bordered"&gt;
@@ -280,14 +278,14 @@ class @CitiesModel
     &lt;/tbody&gt;
   &lt;/table&gt;
   &lt;span data-bind="text: recordsText" class="label label-info pull-right"&gt;&lt;/span&gt;
-  &lt;div data-bind="visible: pages() &gt; 1"&gt;
+  &lt;div data-bind="visible: limitedPages().length &gt; 1"&gt;
     &lt;ul class="pagination"&gt;
       &lt;li data-bind="css: leftPagerClass, click: prevPage"&gt;
         &lt;a href="#"&gt;&amp;laquo;&lt;/a&gt;
       &lt;/li&gt;
-      &lt;!-- ko foreach: {data: (new Array(pages()))} --&gt;
-      &lt;li data-bind="css: $parent.pageClass($index() + 1)"&gt;
-        &lt;a href="#" data-bind="text: $index() + 1, click: $parent.gotoPage($index() + 1)"&gt;&lt;/a&gt;
+      &lt;!-- ko foreach: {data: limitedPages} --&gt;
+      &lt;li data-bind="css: $parent.pageClass(number)"&gt;
+        &lt;a href="#" data-bind="text: number, click: $parent.gotoPage(number)"&gt;&lt;/a&gt;
       &lt;/li&gt;
       &lt;!-- /ko --&gt;
       &lt;li data-bind="css: rightPagerClass, click: nextPage"&gt;
@@ -302,186 +300,188 @@ document.addEventListener('DOMContentLoaded', function(){
 });
 &lt;/script&gt;</pre>
 
-          <h3>Result:</h3>
-          <div id="sorted-table" data-bind="with: table">
-            <div class="pull-right">
-              <strong>Results per page</strong>
-              <select data-bind="options: [10,25,50], value: perPage"></select>
-            </div>
-            <input type="text" data-bind="textInput: filter" placeholder="Search"/>
-            <table class="table table-striped table-bordered">
-              <thead>
-                <tr>
-                  <th style="width: 34%;" data-bind="click: toggleSort('cityName')" class="sortable">
-                    City
-                    <i data-bind="css: sortClass('cityName')"></i>
-                  </th>
-                  <th style="width: 33%;" data-bind="click: toggleSort('countryName')" class="sortable">
-                    Country
-                    <i data-bind="css: sortClass('countryName')"></i>
-                  </th>
-                  <th style="width: 33%;" data-bind="click: toggleSort('population')" class="sortable">
-                    Population
-                    <i data-bind="css: sortClass('population')"></i>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr data-bind="visible: showNoData">
-                  <td colspan="3" class="aligncenter">
-                    This table has no data.
-                  </td>
-                </tr>
-                <tr data-bind="visible: showLoading">
-                  <td colspan="3" class="aligncenter">
-                    <i data-bind="css: {'icon-spin': showLoading}" class="icon-spinner"></i>
-                    Loading data...
-                  </td>
-                </tr>
-                <!-- ko foreach: {data: pagedRows, as: '$row'}  -->
-                <tr>
-                  <td data-bind="text: $row.cityName"></td>
-                  <td data-bind="text: $row.countryName"></td>
-                  <td data-bind="text: $row.population"></td>
-                </tr>
-                <!-- /ko -->
-              </tbody>
-            </table>
-            <span data-bind="text: recordsText" class="label label-info pull-right"></span>
-            <div data-bind="visible: pages() > 1">
-              <ul class="pagination">
-                <li data-bind="css: leftPagerClass, click: prevPage">
-                  <a href="#">&laquo;</a>
-                </li>
-                <!-- ko foreach: {data: (new Array(pages()))} -->
-                <li data-bind="css: $parent.pageClass($index() + 1)">
-                  <a href="#" data-bind="text: $index() + 1, click: $parent.gotoPage($index() + 1)"></a>
-                </li>
-                <!-- /ko -->
-                <li data-bind="css: rightPagerClass, click: nextPage">
-                  <a href="#">&raquo;</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <script type="text/javascript">
-          document.addEventListener('DOMContentLoaded', function(){
-            window.view = new CitiesModel();
-          });
-          </script>
+                <h3>Result:</h3>
+                <div id="sorted-table" data-bind="with: table">
+                    <div class="pull-right">
+                        <strong>Results per page</strong>
+                        <select data-bind="options: [10,25,50,5,1], value: perPage"></select>
+                    </div>
+                    <input type="text" data-bind="textInput: filter" placeholder="Search" />
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 34%;" data-bind="click: toggleSort('cityName')" class="sortable">
+                                    City
+                                    <i data-bind="css: sortClass('cityName')"></i>
+                                </th>
+                                <th style="width: 33%;" data-bind="click: toggleSort('countryName')" class="sortable">
+                                    Country
+                                    <i data-bind="css: sortClass('countryName')"></i>
+                                </th>
+                                <th style="width: 33%;" data-bind="click: toggleSort('population')" class="sortable">
+                                    Population
+                                    <i data-bind="css: sortClass('population')"></i>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-bind="visible: showNoData">
+                                <td colspan="3" class="aligncenter">
+                                    This table has no data.
+                                </td>
+                            </tr>
+                            <tr data-bind="visible: showLoading">
+                                <td colspan="3" class="aligncenter">
+                                    <i data-bind="css: {'icon-spin': showLoading}" class="icon-spinner"></i>
+                                    Loading data...
+                                </td>
+                            </tr>
+                            <!-- ko foreach: {data: pagedRows, as: '$row'}  -->
+                            <tr>
+                                <td data-bind="text: $row.cityName"></td>
+                                <td data-bind="text: $row.countryName"></td>
+                                <td data-bind="text: $row.population"></td>
+                            </tr>
+                            <!-- /ko -->
+                        </tbody>
+                    </table>
+                    <span data-bind="text: recordsText" class="label label-info pull-right"></span>
+                    <div data-bind="visible: limitedPages().length > 1">
+                        <ul class="pagination">
+                            <li data-bind="css: leftPagerClass, click: prevPage">
+                                <a href="#">&laquo;</a>
+                            </li>
+                            <!-- ko foreach: {data: limitedPages} -->
+                            <li data-bind="css: $parent.pageClass(number)">
+                                <a href="#" data-bind="text: number, click: $parent.gotoPage(number)"></a>
+                            </li>
+                            <!-- /ko -->
+                            <li data-bind="css: rightPagerClass, click: nextPage">
+                                <a href="#">&raquo;</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function () {
+                        window.view = new CitiesModel();
+                    });
+                </script>
 
 
-          <h3>Example without sorting</h3>
-          <div id="unsorted-table" data-bind="with: table">
-            <div class="pull-right">
-              <strong>Results per page</strong>
-              <select data-bind="options: [10,25,50], value: perPage"></select>
-            </div>
-            <input type="text" data-bind="textInput: filter" placeholder="Search"/>
-            <table class="table table-striped table-bordered">
-              <thead>
-                <tr>
-                  <th style="width: 34%;">
-                    City
-                  </th>
-                  <th style="width: 33%;">
-                    Country
-                  </th>
-                  <th style="width: 33%;">
-                    Population
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr data-bind="visible: showNoData">
-                  <td colspan="3" class="aligncenter">
-                    This table has no data.
-                  </td>
-                </tr>
-                <tr data-bind="visible: showLoading">
-                  <td colspan="3" class="aligncenter">
-                    <i data-bind="css: {'icon-spin': showLoading}" class="icon-spinner"></i>
-                    Loading data...
-                  </td>
-                </tr>
-                <!-- ko foreach: {data: pagedRows, as: '$row'}  -->
-                <tr>
-                  <td data-bind="text: $row.cityName"></td>
-                  <td data-bind="text: $row.countryName"></td>
-                  <td data-bind="text: $row.population"></td>
-                </tr>
-                <!-- /ko -->
-              </tbody>
-            </table>
-            <span data-bind="text: recordsText" class="label label-info pull-right"></span>
-            <div data-bind="visible: pages() > 1">
-              <ul class="pagination">
-                <li data-bind="css: leftPagerClass, click: prevPage">
-                  <a href="#">&laquo;</a>
-                </li>
-                <!-- ko foreach: {data: (new Array(pages()))} -->
-                <li data-bind="css: $parent.pageClass($index() + 1)">
-                  <a href="#" data-bind="text: $index() + 1, click: $parent.gotoPage($index() + 1)"></a>
-                </li>
-                <!-- /ko -->
-                <li data-bind="css: rightPagerClass, click: nextPage">
-                  <a href="#">&raquo;</a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <script type="text/javascript">
-          document.addEventListener('DOMContentLoaded', function(){
-            window.unsorted_cities = new CitiesModelUnsorted();
-          });
-          </script>
+                <h3>Example without sorting</h3>
+                <div id="unsorted-table" data-bind="with: table">
+                    <div class="pull-right">
+                        <strong>Results per page</strong>
+                        <select data-bind="options: [10,25,50,5,1], value: perPage"></select>
+                    </div>
+                    <input type="text" data-bind="textInput: filter" placeholder="Search" />
+                    <table class="table table-striped table-bordered">
+                        <thead>
+                            <tr>
+                                <th style="width: 34%;">
+                                    City
+                                </th>
+                                <th style="width: 33%;">
+                                    Country
+                                </th>
+                                <th style="width: 33%;">
+                                    Population
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr data-bind="visible: showNoData">
+                                <td colspan="3" class="aligncenter">
+                                    This table has no data.
+                                </td>
+                            </tr>
+                            <tr data-bind="visible: showLoading">
+                                <td colspan="3" class="aligncenter">
+                                    <i data-bind="css: {'icon-spin': showLoading}" class="icon-spinner"></i>
+                                    Loading data...
+                                </td>
+                            </tr>
+                            <!-- ko foreach: {data: pagedRows, as: '$row'}  -->
+                            <tr>
+                                <td data-bind="text: $row.cityName"></td>
+                                <td data-bind="text: $row.countryName"></td>
+                                <td data-bind="text: $row.population"></td>
+                            </tr>
+                            <!-- /ko -->
+                        </tbody>
+                    </table>
+                    <span data-bind="text: recordsText" class="label label-info pull-right"></span>
+                    <div data-bind="visible: limitedPages().length > 1">
+                        <ul class="pagination">
+                            <li data-bind="css: leftPagerClass, click: prevPage">
+                                <a href="#">&laquo;</a>
+                            </li>
+                            <!-- ko foreach: {data: limitedPages} -->
+                            <li data-bind="css: $parent.pageClass(number)">
+                                <a href="#" data-bind="text:number, click: $parent.gotoPage(number)"></a>
+                            </li>
+                            <!-- /ko -->
+                            <li data-bind="css: rightPagerClass, click: nextPage">
+                                <a href="#">&raquo;</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <script type="text/javascript">
+                    document.addEventListener('DOMContentLoaded', function () {
+                        window.unsorted_cities = new CitiesModelUnsorted();
+                    });
+                </script>
 
 
-          <h2>Options</h2>
-          <p>When instanciating with <code>new DataTable</code> you have can pass in the following options as the second parameter:</p>
-          <dl class='dl-horizontal'>
-            <dt><code>recordWord</code></dt>
-            <dd>The name of your rows. In the case above, we used <code>city</code>. Default: <code>record</code></dd>
+                <h2>Options</h2>
+                <p>When instantiating with <code>new DataTable</code> you have can pass in the following options as the second parameter:</p>
+                <dl class='dl-horizontal'>
+                    <dt><code>recordWord</code></dt>
+                    <dd>The name of your rows. In the case above, we used <code>city</code>. Default: <code>record</code></dd>
 
-            <dt><code>recordWordPlural</code></dt>
-            <dd>The plural name of your rows. Since we used <code>city</code> as our recordWord, we used <code>cities</code> for recordWordPlural. Default: <code>recordWord + 's'</code></dd>
+                    <dt><code>recordWordPlural</code></dt>
+                    <dd>The plural name of your rows. Since we used <code>city</code> as our recordWord, we used <code>cities</code> for recordWordPlural. Default: <code>recordWord + 's'</code></dd>
 
-            <dt><code>sortDir</code></dt>
-            <dd>The initial sorting direction for the table. Default: <code>'asc'</code></dd>
+                    <dt><code>sortDir</code></dt>
+                    <dd>The initial sorting direction for the table. Default: <code>'asc'</code></dd>
 
-            <dt><code>sortField</code></dt>
-            <dd>The initial sorting column for the table. As of v0.5.0, this setting is optional and the order of <code>table.rows</code> will be maintained and sorting will be disabled.</dd>
+                    <dt><code>sortField</code></dt>
+                    <dd>The initial sorting column for the table. As of v0.5.0, this setting is optional and the order of <code>table.rows</code> will be maintained and sorting will be disabled.</dd>
 
-            <dt><code>perPage</code></dt>
-            <dd>Integer indicating the number of rows to be shown per page. Default: <code>15</code></dd>
+                    <dt><code>perPage</code></dt>
+                    <dd>Integer indicating the number of rows to be shown per page. Default: <code>15</code></dd>
 
-            <dt><code>unsortedClass</code><br /><code>descSortClass</code><br /><code>ascSortClass</code></dt>
-            <dd>The classes given to the icons in the <code>th</code> elements indicating the direction of sorting. Set to '' if you would rather have no icons. Default: <code>''</code> for each</dd>
-          </dl>
-          <p>Additionally, you can define the <code>match</code> function on the row class, and the datatable will use it for filtering. If left undefined (as in the example above), the DataTable will automatically search all columns defined on the row. E.g:</p>
-          <dl>
-            <dt><code>row.match:</code></dt>
-            <dd><pre>
+                    <dt><code>unsortedClass</code><br /><code>descSortClass</code><br /><code>ascSortClass</code></dt>
+                    <dd>The classes given to the icons in the <code>th</code> elements indicating the direction of sorting. Set to '' if you would rather have no icons. Default: <code>''</code> for each</dd>
+                </dl>
+                <p>Additionally, you can define the <code>match</code> function on the row class, and the datatable will use it for filtering. If left undefined (as in the example above), the DataTable will automatically search all columns defined on the row. E.g:</p>
+                <dl>
+                    <dt><code>row.match:</code></dt>
+                    <dd>
+                        <pre>
 (filter) ->
   @population().toLowerCase().indexOf(filter) >= 0 or
   @countryName .toLowerCase().indexOf(filter) >= 0 or
-  @cityName    .toLowerCase().indexOf(filter) >= 0</pre></dd>
-          </dl>
+  @cityName    .toLowerCase().indexOf(filter) >= 0</pre>
+                    </dd>
+                </dl>
 
-          <h2>Further Usage</h2>
-          <p>Knockout DataTable comes packaged with some advanced filtering. Below is a list of example search terms and the results returned.</p>
-          <dl>
-            <dt><code>cityName:atlanta</code></dt>
-            <dd>Results with 'atlanta' in cityName (case insensitive)</dd>
-            <dt><code>cItYnAmE:aTlAnTa</code></dt>
-            <dd>Results with 'atlanta' in cityName (case insensitive)</dd>
-            <dt><code>countryName:United cityName:L</code></dt>
-            <dd>Results with 'united' in countryName and 'l' in cityName (case insensitive)<p class="text-muted">Note: as of right now, there is no built-in support for multi-word searching with ':'-delimeted searching</span></dd>
-            <dt><code>countryname:japan 6</code></dt>
-            <dd>Results with 'japan' in countryName and '6' somewhere in one of the columns (case insensitive)</dd>
-          </dl>
+                <h2>Further Usage</h2>
+                <p>Knockout DataTable comes packaged with some advanced filtering. Below is a list of example search terms and the results returned.</p>
+                <dl>
+                    <dt><code>cityName:atlanta</code></dt>
+                    <dd>Results with 'atlanta' in cityName (case insensitive)</dd>
+                    <dt><code>cItYnAmE:aTlAnTa</code></dt>
+                    <dd>Results with 'atlanta' in cityName (case insensitive)</dd>
+                    <dt><code>countryName:United cityName:L</code></dt>
+                    <dd>Results with 'united' in countryName and 'l' in cityName (case insensitive)<p class="text-muted">Note: as of right now, there is no built-in support for multi-word searching with ':'-delimeted searching</span></dd>
+                    <dt><code>countryname:japan 6</code></dt>
+                    <dd>Results with 'japan' in countryName and '6' somewhere in one of the columns (case insensitive)</dd>
+                </dl>
+            </div>
         </div>
-      </div>
     </div>
-  </body>
+</body>
 </html>

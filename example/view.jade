@@ -30,10 +30,10 @@ div.cloak(data-bind='with: exampleTable')
 
   span.label.label-info.pull-right(data-bind='text: recordsText')
 
-  .pagination(data-bind='visible: pages() > 1')
+  .pagination(data-bind='visible: pages().length > 1')
     ul
       li(data-bind='css: leftPagerClass, click: prevPage'): a(href='#') &laquo;
-      li(data-bind='repeat: {count: pages, bind: "css: pageClass($index + 1)"}')
+      li(data-bind='repeat: {count: pages().length, bind: "css: pageClass($index + 1)"}')
         a(href='#', data-bind='text: $index + 1, click: gotoPage($index + 1)')
       li(data-bind='css: rightPagerClass, click: nextPage'): a(href='#') &raquo;
 
