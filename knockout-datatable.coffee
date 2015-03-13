@@ -145,7 +145,7 @@ class @DataTable
       
     @pages = pureComputed => @getPages @filteredRows().length
     @limitedPages = pureComputed => @getLimitedPages()
-    @currentPage = pureComputed => @pages()[@currentPageNumber() - 1]
+    @currentPage = pureComputed => if @pages().length > 0 then @pages()[@currentPageNumber() - 1] else {number: 1, start:0, end: 0, blanks: []}
     @pagedRows = pureComputed => @filteredRows().slice(@currentPage().start, @currentPage().end + 1)
 
     @leftPagerClass = pureComputed => 'disabled' if @currentPageNumber() is 1

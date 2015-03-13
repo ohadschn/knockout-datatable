@@ -204,7 +204,16 @@
       })(this));
       this.currentPage = pureComputed((function(_this) {
         return function() {
-          return _this.pages()[_this.currentPageNumber() - 1];
+          if (_this.pages().length > 0) {
+            return _this.pages()[_this.currentPageNumber() - 1];
+          } else {
+            return {
+              number: 1,
+              start: 0,
+              end: 0,
+              blanks: []
+            };
+          }
         };
       })(this));
       this.pagedRows = pureComputed((function(_this) {
