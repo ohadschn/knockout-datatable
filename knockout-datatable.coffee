@@ -31,6 +31,7 @@ class @DataTable
       perPage:          options.perPage             or 15
       paginationLimit:  options.paginationLimit     or 10
       filterFn:         options.filterFn            or undefined
+      alwaysMatch:      options.alwaysMatch         or false
       unsortedClass:    options.unsortedClass       or ''
       descSortClass:    options.descSortClass       or ''
       ascSortClass:     options.ascSortClass        or ''
@@ -120,7 +121,7 @@ class @DataTable
 
       rows = @rows.slice(0)
 
-      if filter isnt ''
+      if @options.alwaysMatch or filter isnt ''
         filterFn = @filterFn(filter)
         rows = rows.filter(filterFn)
 
@@ -220,7 +221,7 @@ class @DataTable
               primitiveCompare((if ko.isObservable(row[rowAttr]) then row[rowAttr]() else row[rowAttr]), val)
             else # if the current instance doesn't have the "key" attribute, return false (i.e., it's not a match)
               false
-        (false not in conditionals) and (if filter isnt '' then (if row.match? then row.match(filter) else _defaultMatch(filter, row, @rowAttributeMap())) else true)
+        (false not in conditionals) and (if (@options.alwaysMatch or filter isnt '') then (if row.match? then row.match(filter) else _defaultMatch(filter, row, @rowAttributeMap())) else true)
 
   initWithServerSidePagination: ->
     _getDataFromServer = (data, cb) =>

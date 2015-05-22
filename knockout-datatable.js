@@ -41,6 +41,7 @@
         perPage: options.perPage || 15,
         paginationLimit: options.paginationLimit || 10,
         filterFn: options.filterFn || void 0,
+        alwaysMatch: options.alwaysMatch || false,
         unsortedClass: options.unsortedClass || '',
         descSortClass: options.descSortClass || '',
         ascSortClass: options.ascSortClass || ''
@@ -145,7 +146,7 @@
           _this.filtering(true);
           filter = _this.filter();
           rows = _this.rows.slice(0);
-          if (filter !== '') {
+          if (_this.options.alwaysMatch || filter !== '') {
             filterFn = _this.filterFn(filter);
             rows = rows.filter(filterFn);
           }
@@ -370,7 +371,7 @@
               }
               return _results;
             }).call(_this);
-            return (__indexOf.call(conditionals, false) < 0) && (filter !== '' ? (row.match != null ? row.match(filter) : _defaultMatch(filter, row, _this.rowAttributeMap())) : true);
+            return (__indexOf.call(conditionals, false) < 0) && (_this.options.alwaysMatch || filter !== '' ? (row.match != null ? row.match(filter) : _defaultMatch(filter, row, _this.rowAttributeMap())) : true);
           };
         };
       })(this);
