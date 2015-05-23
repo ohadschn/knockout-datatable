@@ -55,7 +55,7 @@ class @DataTable
     @sortField   = ko.observable @options.sortField
     @perPage     = ko.observable @options.perPage
     @currentPageNumber = ko.observable 1
-    @filter      = ko.observable ''
+    @filter      = ko.observable('').extend({ rateLimit: { method: "notifyWhenChangesStop", timeout: 400 } });
     @loading     = ko.observable false
     @rows        = ko.observableArray []
     
