@@ -115,7 +115,13 @@ class @DataTable
 
       attrMap
 
+    filterTrigger = ko.observable().extend({notify:'always'})
+    
+    @triggerFilterCalculation = =>
+        filterTrigger.valueHasMutated()    
+        
     @filteredRows = pureComputed =>
+      filterTrigger()
       @filtering true
       filter = @filter()
 

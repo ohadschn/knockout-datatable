@@ -116,7 +116,7 @@
     };
 
     DataTable.prototype.initWithClientSidePagination = function(rows) {
-      var _defaultMatch;
+      var filterTrigger, _defaultMatch;
       this.filtering = ko.observable(false);
       this.filter.subscribe((function(_this) {
         return function() {
@@ -145,9 +145,18 @@
           return attrMap;
         };
       })(this));
+      filterTrigger = ko.observable().extend({
+        notify: 'always'
+      });
+      this.triggerFilterCalculation = (function(_this) {
+        return function() {
+          return filterTrigger.valueHasMutated();
+        };
+      })(this);
       this.filteredRows = pureComputed((function(_this) {
         return function() {
           var filter, filterFn;
+          filterTrigger();
           _this.filtering(true);
           filter = _this.filter();
           rows = _this.rows.slice(0);
