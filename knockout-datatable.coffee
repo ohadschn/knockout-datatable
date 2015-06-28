@@ -119,6 +119,7 @@ class @DataTable
     
     @triggerFilterCalculation = =>
         filterTrigger.valueHasMutated()    
+        @currentPageNumber 1
         
     @filteredRows = pureComputed =>
       filterTrigger()
